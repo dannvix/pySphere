@@ -1669,6 +1669,43 @@ class VIVirtualMachine(VIManagedEntity):
         except (VI.ZSI.FaultException), e:
             raise VIApiException(e)
 
+    # todo: add unit test, add async option
+    def create_screenshot(self, sync_run=True):
+        """
+        Create a screenshot image of the guest OS. Returns a resouce pathname
+        of datastore where the image is saved (e.g. [datastore1] vm1/vm1-1.png).
+          * sync_run: if True (default) waits for the task to finish and returns
+            (raises an exception if the task didn't succeed). If False the task
+            is started and a VITask instance is returned
+        """
+        if not self._auth_obj:
+            raise VIException("You must call first login_in_guest",
+                              FaultTypes.INVALID_OPERATION)
+
+        try:
+            # build request
+            request = VI.CreateScreenshot_TaskRequestMsg()
+            _this = request.new__this(self._mor)
+            _this.set_attribute_type(self._mor.get_attribute_type())
+            request.set_element__this(_this)
+
+            # send request and retrieve task instance
+            task = self._server._proxy.CreateScreenshot_Task(request)._returnval
+            vi_task = VITask(task, self._server)
+
+            # get result (resource path on datastore)
+            if sync_run:
+                status = vi_task.wait_for_state([vi_task.STATE_SUCCESS,
+                                                 vi_task.STATE_ERROR])
+                if not status == vi_task.STATE_SUCCESS:
+                    raise VIException(vi_task.get_error_message(),
+                                      FaultTypes.TASK_ERROR)
+                resource_path = vi_task.get_result()
+                return resource_path
+            return vi_task
+        except (VI.ZSI.FaultException), e:
+            raise VIApiException(e)
+
     #---------------------#
     #-- PRIVATE METHODS --#
     #---------------------#
