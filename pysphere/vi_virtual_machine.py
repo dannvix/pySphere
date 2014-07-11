@@ -1077,6 +1077,66 @@ class VIVirtualMachine(VIManagedEntity):
         except (VI.ZSI.FaultException), e:
             raise VIApiException(e)
     
+    # todo: add unit test
+    def get_directory(self, guest_path, local_path, overwrite=False):
+        """
+        Initiate an operation to recursively transfer a directory from the guest.
+          * guest_path [string]: The complete path to the fodler inside the guest
+                                that has to be transferred to the client. It
+                                cannot be a path to a file or a symlink.
+          * local_path [string]: The path to the local folder to be created
+        """
+        if not self._file_mgr:
+            raise VIException("Files operations not support on this server",
+                              FaultTypes.NOT_SUPPORTED)
+        if not self._auth_obj:
+            raise VIException("You must call first login_in_guest",
+                              FaultTypes.INVALID_OPERATION)
+
+        try:
+            # determine if the guest OS is Windows
+            is_windows = "windows" in self.get_property("guest_id").lower()
+
+            def get_directory_impl(guest_path, local_path, overwrite, is_windows):
+              if os.path.exists(local_path):
+                  if not overwrite:
+                    raise VIException("Local file already exists",
+                                      FaultTypes.PARAMETER_ERROR)
+              else:
+                  os.makedirs(local_path)
+
+              files = self.list_files(guest_path)
+              for file in files:
+                if (file["path"] == ".") or (file["path"] == ".."): continue
+
+                basename = os.path.basename(file["path"])
+                fullpath = os.path.join(guest_path, basename)
+                local_full_path = os.path.join(local_path, basename)
+
+                # for Windows path, VMware API won't work without this hack
+                if is_windows:
+                  fullpath = fullpath.replace("/", "\\")
+
+                # fixme: will it work when file["type"] is symlink?
+                if file["type"] == "file":
+                  if os.path.exists(local_full_path):
+                    if not overwrite:
+                      raise VIException("Local file already exists",
+                                        FaultTypes.PARAMETER_ERROR)
+                    os.remove(local_full_path)
+                  self.get_file(fullpath, local_full_path)
+                elif file["type"] == "directory":
+                  get_directory_impl(fullpath, local_full_path, overwrite, is_windows)
+
+            get_directory_impl(guest_path, local_path, overwrite, is_windows)
+        except (VI.ZSI.FaultException), e:
+            raise VIApiException(e)
+
+    # todo: implement
+    def send_directory(self, local_path, guest_path, overwrite=False):
+        raise VIException("Operation not supported yet",
+                          FaultTypes.NOT_SUPPORTED)
+
     def move_directory(self, src_path, dst_path):
         """
         Moves or renames a directory in the guest.
