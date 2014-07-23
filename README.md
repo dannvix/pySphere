@@ -1,88 +1,66 @@
+pySphere
 ========
-PySphere 
-========
-Python API for interacting with the vSphere Web Services SDK.
--------------------------------------------------------------
+VMware vSphere Web Service client in Python.
 
-Visit the project_ site for more information.
 
-.. _project: http://pysphere.googlecode.com
+Preface
+-------
+* This is a enhanced fork of Sebastian Tello's [PySphere](https://code.google.com/p/pysphere/), not just a git-svn mirror.
+* All trademarks and registered trademarks are the property of their respective owners.
+* Pull requests are welcome.
 
-**Among other operations, PySphere provides easy interfaces to:**
 
-- Connect to VMWare's ESX, ESXi, Virtual Center, Virtual Server hosts 
-- Query hosts, datacenters, resource pools, virtual machines
-- VMs: Power on, power off, reset, revert to snapshot, get properties, update 
-  vmware tools, clone, migrate.
-- vSphere 5.0 Guest Operations: create/delete/move files and directories.
-  upload/download files from the guest system. List/start/stop processes in 
-  the guest system.
-- Create and delete snapshots
-- Get hosts statistics and monitor performance
+Features
+--------
+* Connect to VMWare's ESX, ESXi, Virtual Center, Virtual Server hosts
+* Query hosts, datacenters, datastores, resource pools, virtual machines
+* VMs: Power on, power off, reset, revert to snapshot, get properties, update vmware tools, clone, migrate
+* vSphere 5.0 Guest operations: Create/delete/move files and directories. Upload/download files and directories from the guest system. List/start/stop processes in the guest system
+* Create and delete snapshots
+* Create and download screenshots of guest display
+* vSphere 5.0 Datastore operations: Upload/download files from the datastore file system
+* Get hosts statistics and monitor performance
 
-An of course, you can use it to access all the vSphere API through python.
+And of course, you can use it to access all the vSphere API through python.
 
-It's built upon a slightly modified version of ZSI_ (that comes bundled-in) 
-which makes it really fast in contrast to other python SOAP libraries that don't
+It's built upon a slightly modified version of [ZSI](http://pywebsvcs.sourceforge.net/zsi.html) (that comes bundled-in) which makes it really fast in contrast to other python SOAP libraries that don't
 provide code generation.
 
-.. _ZSI: http://pywebsvcs.sourceforge.net/zsi.html
 
 Installation
 ------------
+The “pysphere” package in PyPI is the original version (Sebastian's). Currently the only way to install this package is to download this repository and run `python setup.py install`.
 
-The simplest way is using setuptools_' easy_install:
-
-.. _setuptools: http://pypi.python.org/pypi/setuptools
-
-::
-
-  easy_install -U pysphere
-
-Or using the pip_:
-
-.. _pip: http://pypi.python.org/pypi/pip
-
-::
-
-  pip install -U pysphere
-
-You can aslo find the source package and windows installer in the downloads_ 
-section. To install it from the source package:
-
-.. _downloads: http://code.google.com/p/pysphere/downloads/list
-
-1. Unzip the package
-2. run: ``python setup.py install``
 
 Quick Example
 -------------
+Here's an example of how to query and power on all virtual machines in the specified datacenter and cluster.
 
-Here's how you power on a virtual machine. See also the `getting started`_ guide
-and the project's wiki_ with the full documentation.
+```python
+from pysphere import VIServer
+server = VIServer()
+server.connect("my.esx.host.example.com", "username", "secret")
+vms = server.get_registered_vms(datacenter="MyDataCenter", cluster="MyCluster")
+for vm_path in vms:
+    print "vm_path = [%s]" % vm_path # "[datastore] path/to/file.vmx"
+    vm = server.get_vm_by_path(vm_path)
+    vm.power_on()
+    print vm.get_status() # "POWERED ON"
+```
 
-.. _getting started: http://code.google.com/p/pysphere/wiki/GettingStarted
-.. _wiki: http://code.google.com/p/pysphere/w/list
 
->>> from pysphere import VIServer
->>> server = VIServer()
->>> server.connect("my.esx.host.com", "myusername", "secret")
->>> vm = server.get_vm_by_path("[datastore] path/to/file.vmx")
->>> vm.power_on()
->>> print vm.get_status()
-POWERED ON
+Resource
+--------
+* [Getting Started](http://code.google.com/p/pysphere/wiki/GettingStarted) guide
+* Some examples are located in `examples/`
+* More examples and use cases can be found in the [discussion group](http://groups.google.com/group/pysphere)
 
-Discussion Group
-----------------
 
-You can find a lot more examples and use cases in the `discussion group`_
-
-.. _discussion group: http://groups.google.com/group/pysphere
 
 License
 -------
-
 Copyright (c) 2012, Sebastian Tello
+Copyright (c) 2014, Shao-Chung Chen
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -110,9 +88,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 
-ZSI License
------------
-
+License of `ZSI`
+----------------
 Copyright (c) 2003, The Regents of the University of California,
 through Lawrence Berkeley National Laboratory (subject to receipt of
 any required approvals from the U.S. Dept. of Energy). All rights
