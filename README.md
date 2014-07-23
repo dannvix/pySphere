@@ -59,8 +59,8 @@ Resource
 
 License
 -------
-Copyright (c) 2012, Sebastian Tello
-Copyright (c) 2014, Shao-Chung Chen
+Copyright (c) 2012, Sebastian Tello  
+Copyright (c) 2014, Shao-Chung Chen  
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
