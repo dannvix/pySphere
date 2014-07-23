@@ -32,6 +32,7 @@ import sys
 from pysphere.resources import VimService_services as VI
 
 from pysphere import VIException, VIApiException, FaultTypes
+from pysphere.vi_datastore import VIDatastore
 from pysphere.vi_virtual_machine import VIVirtualMachine
 from pysphere.vi_performance_manager import PerformanceManager
 from pysphere.vi_task_history_collector import VITaskHistoryCollector
@@ -179,6 +180,7 @@ class VIServer:
         return self._get_managed_objects(MORTypes.HostSystem, from_mor)
 
 
+    # todo: consider to return VIDatastore instances
     def get_datastores(self, from_mor=None):
         """
         Returns a dictionary of the existing datastores. Keys are
@@ -187,6 +189,43 @@ class VIServer:
             specified managed entity.
         """
         return self._get_managed_objects(MORTypes.Datastore, from_mor)
+
+    # todo: add unit test
+    def get_datastore_by_name(self, name, datacenter=None):
+        """
+        Returns an instance of VIDatastore, where its name matches @name.
+        The datastore is searched throughout all the datacenters, unless the
+        name or the MOR of the datacenter (the datastore belongs to) is given.
+        The first instance matching @name is returned.
+        """
+        if not self.__logged:
+            raise VIException("Must call 'connect' before invoking this method",
+                              FaultTypes.NOT_CONNECTED)
+
+        try:
+            if datacenter:
+                if VIMor.is_mor(datacenter):
+                    nodes = [datacenter]
+                else:
+                    dc = self.get_datacenters()
+                    nodes = [(k,v) for k,v in dc.iteritems() if v == datacenter]
+            else:
+                nodes = self.get_datacenters().iteritems()
+
+            # todo: use self.get_datastores() instead, if possible
+            for node in nodes:
+                datacenter_mor, datacenter_name = node
+                datastores = self._get_managed_objects(MORTypes.Datastore,
+                                                       from_mor=datacenter)
+                for k,v in datastores.iteritems():
+                    if v == name:
+                        return VIDatastore(self, datacenter_name, v)
+
+        except (VI.ZSI.FaultException), e:
+            raise VIApiException(e)
+
+        raise VIException("Cannot find a datastore named '%s'" % name,
+                          FaultTypes.OBJECT_NOT_FOUND)
 
     def get_clusters(self, from_mor=None):
         """
