@@ -54,6 +54,7 @@ Resource
 * [Getting Started](http://code.google.com/p/pysphere/wiki/GettingStarted) guide
 * Some examples are located in `examples/`
 * More examples and use cases can be found in the [discussion group](http://groups.google.com/group/pysphere)
+* [pyVmomi](https://github.com/vmware/pyvmomi) — official VMware vSphere API Python Bindings. [What is the Difference between PySphere and PyVmomi?](http://stackoverflow.com/questions/21326448)
 
 
 
