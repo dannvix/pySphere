@@ -1706,6 +1706,29 @@ class VIVirtualMachine(VIManagedEntity):
         except (VI.ZSI.FaultException), e:
             raise VIApiException(e)
 
+    # todo: add unit text
+    def get_screenshot(self, local_path, overwrite=True):
+        """
+        Create and write screenshot image to local_path
+        """
+        if not self._auth_obj:
+            raise VIException("You must call first login_in_guest",
+                              FaultTypes.INVALID_OPERATION)
+
+        if os.path.exists(local_path) and not overwrite:
+            raise VIException("Local file already exists",
+                              FaultTypes.PARAMETER_ERROR)
+
+        try:
+            import re
+            screenshot_path = self.create_screenshot(sync_run=True)
+            datastore_name, resource_path = re.findall(r"^\[([^\[\]]+)\] (.*)", screenshot_path)[0]
+
+            datastore = self._server.get_datastore_by_name(datastore_name)
+            datastore.get_file(resource_path, local_path)
+        except (VI.ZSI.FaultException), e:
+            raise VIApiException(e)
+
     #---------------------#
     #-- PRIVATE METHODS --#
     #---------------------#
