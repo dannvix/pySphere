@@ -6,7 +6,7 @@ try:
 except:
     from distutils.core import setup
 
-VERSION = (0, 1, 8)
+VERSION = (0, 2, 0)
 
 if __name__ == "__main__":
     try:
@@ -32,7 +32,7 @@ if __name__ == "__main__":
         description="VMware vSphere Web Service client in Python",
         author="Sebastian Tello <argos83@gmail.com>, Shao-Chung Chen <dannvix@gmail.com>",
         url="https://github.com/dannvix/pySphere",
-        download_url="https://github.com/dannvix/pySphere/archive/v0.1.8.zip",
+        download_url="https://github.com/dannvix/pySphere/archive/v0.2.0.zip",
         keywords = ["vSphere", "Virtual", "vmware", "ESX", "ESXi", "VirtualCenter", "SDK", "API"],
         classifiers = [
             "Programming Language :: Python",

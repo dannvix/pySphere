@@ -1,7 +1,12 @@
-Roadmap for 0.1.9
-- Add vms_from_folder method in VIServer
+New in 0.2.0:
+- Forked to GitHub by Shao-Chung Chen
+- Added VIDatastore class to manage files/folders on datastores
+- Added vms_from_folder(), get_datastore_by_name() methods to VIServer
+- Added get_directory(), create_screenshot(), get_screenshot() methods to VIVirtualMachine
+- Added "interactive session" option to VIVirtualMachine.login_in_guest()
+- Added "synchronous run" option to VIVirtualMachine.start_process()
 
-New in for 0.1.8
+New in 0.1.8:
 - Added VIManagedEntity class extended by VIVirtualMachine
 - Added Rename, Reload, and Destroy methods to VIManagedEntity
 - Fix #26: VIVirtualMachine.send_file() gratuitiosly overwrites urllib2's installed default opener
@@ -9,8 +14,7 @@ New in for 0.1.8
 - Additional 'disks' parameter in VIVirtualMachine.relocate() method.
 - Support to SDK 5.1
 
-New in 0.1.7
-
+New in 0.1.7:
 - Advanced filters parameter in VIServer.get_registered_vms
 - Set connection sockets timeout (works only since python 2.6)
 - added support for historical metrics in performance manager
@@ -23,8 +27,7 @@ New in 0.1.7
 - Added relocate() method to VIVirtualMachine (by Chris Dituri)
 - Several fixes
 
-New in 0.1.6
-
+New in 0.1.6:
 - Added methods to VITask: get_result, get_progress, cancel
 - Added clone method to VIVirtualMachine
 - Added get_question method to VM (returns object with question info and answer method)
@@ -36,7 +39,6 @@ New in 0.1.6
 - Multithread support
 
 New in 0.1.5:
-
 - suppor vSphere 5.0
 - added suspend method to VM
 - added quick vm properties for disks and files info
