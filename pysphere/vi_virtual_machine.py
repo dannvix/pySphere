@@ -1500,7 +1500,7 @@ class VIVirtualMachine(VIManagedEntity):
         except (VI.ZSI.FaultException), e:
             raise VIApiException(e)
 
-    def start_process(self, program_path, args=None, env=None, cwd=None):
+    def start_process(self, program_path, args=None, env=None, cwd=None, sync_run=False):
         """
         Starts a program in the guest operating system. Returns the process PID.
             program_path [string]: The absolute path to the program to start.
@@ -1517,7 +1517,11 @@ class VIVirtualMachine(VIManagedEntity):
                           will be the home directory of the user associated with
                           the guest authentication. For other guest operating 
                           systems, if this value is unset, the behavior is 
-                          unspecified. 
+                          unspecified.
+            sync_run [bool]: Default False. If True, this function blocks until the
+                             started process terminates. Since vSphere has no
+                             support of synchrounous StartProgramInGuest,
+                             this is simulated by polling ListProcessesInGuest.
         """
         if not self._proc_mgr:
             raise VIException("Process operations not supported on this server",
@@ -1545,8 +1549,16 @@ class VIVirtualMachine(VIManagedEntity):
                 spec.set_element_arguments(subprocess.list2cmdline(args))
                 
             request.set_element_spec(spec)
-            
-            return self._server._proxy.StartProgramInGuest(request)._returnval
+            pid = self._server._proxy.StartProgramInGuest(request)._returnval
+
+            if pid and sync_run:
+                # blocks this function until the target process exits
+                while True:
+                    proc = [p for p in self.list_processes() if p['pid'] == p]
+                    if len(proc) == 0 or proc[0]['exit_code'] is not None:
+                        return pid
+                    time.sleep(1.5) # seconds
+            return pid
         except (VI.ZSI.FaultException), e:
             raise VIApiException(e)
 
