@@ -1034,11 +1034,16 @@ class VIVirtualMachine(VIManagedEntity):
     #--------------------------#
     #-- GUEST AUTHENTICATION --#
     #--------------------------#
-    def login_in_guest(self, user, password):
-        """Authenticates in the guest with the acquired credentials for use in 
-        subsequent guest operation calls."""
+    def login_in_guest(self, user, password, interactive=False):
+        """
+        Authenticates in the guest with the acquired credentials for use in
+        subsequent guest operation calls.
+          * interactive [bool]: Default False. If True, processes started by
+                                start_process() would create a window that is
+                                visible in the guest console session.
+        """
         auth = VI.ns0.NamePasswordAuthentication_Def("NameAndPwd").pyclass()
-        auth.set_element_interactiveSession(False)
+        auth.set_element_interactiveSession(True)
         auth.set_element_username(user)
         auth.set_element_password(password)
         self.__validate_authentication(auth)
