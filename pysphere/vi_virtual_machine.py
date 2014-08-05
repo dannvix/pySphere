@@ -1559,7 +1559,7 @@ class VIVirtualMachine(VIManagedEntity):
             if pid and sync_run:
                 # blocks this function until the target process exits
                 while True:
-                    proc = [p for p in self.list_processes() if p['pid'] == p]
+                    proc = [p for p in self.list_processes() if p['pid'] == pid]
                     if len(proc) == 0 or proc[0]['exit_code'] is not None:
                         return pid
                     time.sleep(1.5) # seconds
