@@ -1137,10 +1137,58 @@ class VIVirtualMachine(VIManagedEntity):
         except (VI.ZSI.FaultException), e:
             raise VIApiException(e)
 
-    # todo: implement
+    # todo: add unit test
     def send_directory(self, local_path, guest_path, overwrite=False):
-        raise VIException("Operation not supported yet",
-                          FaultTypes.NOT_SUPPORTED)
+        """
+        Initiates an operation to recursively transfer a directory from local
+        to the guest.
+          * local_path [string]: The path to the local folder to be copied
+          * guest_path [string]: The complete path to the folder inside the
+                                 guest as the destination. It cannot be
+                                 a path to a file or a symlink.
+          * overwrite [bool]: Default False. 
+        """
+        if not self._file_mgr:
+            raise VIException("Files operation not supported on this server",
+                              FaultTypes.NOT_SUPPORTED)
+        if not self._auth_obj:
+            raise VIException("You much call first login_in_guest",
+                              FaultTypes.INVALID_OPERATION)
+
+        try:
+            # determine if the guest OS is Windows
+            is_windows = "windows" in self.get_property("guest_id").lower()
+
+            def send_directory_impl(local_path, guest_path, overwrite, is_windows):
+                local_path = os.path.realpath(local_path)
+                if not os.path.isdir(local_path):
+                    raise VIException("Local path is not a directory",
+                                      FaultTypes.PARAMETER_ERROR)
+                if is_windows:
+                    guest_path = guest_path.replace("/", "\\")
+                try:
+                    self.make_directory(guest_path, create_parents=True)
+                except VIApiException, e:
+                    # FileAlreadyExistsFault
+                    if overwrite:
+                        pass
+                    else:
+                        VIApiException(e)
+
+                files = os.listdir(local_path)
+                for file in files:
+                    file_path = os.path.join(local_path, file)
+                    guest_full_path = os.path.join(guest_path, file)
+                    if is_windows:
+                        guest_full_path = guest_full_path.replace("/", "\\")
+                    if os.path.isdir(file_path):
+                        send_directory_impl(file_path, guest_path, overwrite, is_windows)
+                    elif os.path.isfile(file_path):
+                        self.send_file(file_path, guest_full_path, overwrite)
+
+            send_directory_impl(local_path, guest_path, overwrite, is_windows)
+        except (VI.ZSI.FaultException), e:
+            VIApiException(e)
 
     def move_directory(self, src_path, dst_path):
         """
