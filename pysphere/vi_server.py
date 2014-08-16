@@ -216,7 +216,7 @@ class VIServer:
             for node in nodes:
                 datacenter_mor, datacenter_name = node
                 datastores = self._get_managed_objects(MORTypes.Datastore,
-                                                       from_mor=datacenter)
+                                                       from_mor=datacenter_mor)
                 for k,v in datastores.iteritems():
                     if v == name:
                         return VIDatastore(self, datacenter_name, v)
