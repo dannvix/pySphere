@@ -1182,7 +1182,7 @@ class VIVirtualMachine(VIManagedEntity):
                     if is_windows:
                         guest_full_path = guest_full_path.replace("/", "\\")
                     if os.path.isdir(file_path):
-                        send_directory_impl(file_path, guest_path, overwrite, is_windows)
+                        send_directory_impl(file_path, guest_full_path, overwrite, is_windows)
                     elif os.path.isfile(file_path):
                         self.send_file(file_path, guest_full_path, overwrite)
 
