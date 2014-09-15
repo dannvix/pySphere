@@ -1100,7 +1100,8 @@ class VIVirtualMachine(VIManagedEntity):
 
         try:
             # determine if the guest OS is Windows
-            is_windows = "windows" in self.get_property("guest_id").lower()
+            # see http://goo.gl/pY1pZv for complete guest_id enum list
+            is_windows = self.get_property("guest_id").lower().startswith("win")
 
             def get_directory_impl(guest_path, local_path, overwrite, is_windows):
               if os.path.exists(local_path):
@@ -1157,7 +1158,8 @@ class VIVirtualMachine(VIManagedEntity):
 
         try:
             # determine if the guest OS is Windows
-            is_windows = "windows" in self.get_property("guest_id").lower()
+            # see http://goo.gl/pY1pZv for complete guest_id enum list
+            is_windows = self.get_property("guest_id").lower().startswith("win")
 
             def send_directory_impl(local_path, guest_path, overwrite, is_windows):
                 local_path = os.path.realpath(local_path)
