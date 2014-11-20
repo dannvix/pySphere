@@ -1559,7 +1559,7 @@ class VIVirtualMachine(VIManagedEntity):
         """
         Starts a program in the guest operating system. Returns the process PID.
             program_path [string]: The absolute path to the program to start.
-            args [list of strings]: The arguments to the program.
+            args [list of strings, or string]: The arguments to the program.
             env [dictionary]: environment variables to be set for the program
                               being run. Eg. {'foo':'bar', 'varB':'B Value'}
             cwd [string]: The absolute path of the working directory for the 
@@ -1600,8 +1600,13 @@ class VIVirtualMachine(VIManagedEntity):
             if cwd: spec.set_element_workingDirectory(cwd)
             spec.set_element_arguments("")
             if args:
-                import subprocess
-                spec.set_element_arguments(subprocess.list2cmdline(args))
+                if type(args) is list:
+                    import subprocess
+                    spec.set_element_arguments(subprocess.list2cmdline(args))
+                else:
+                    # allows double-quote (") in the parameter,
+                    # otherwise it would be escaped by subprocess.list2cmdline()
+                    spec.set_element_arguments(str(args))
                 
             request.set_element_spec(spec)
             pid = self._server._proxy.StartProgramInGuest(request)._returnval
