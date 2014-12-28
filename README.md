@@ -7,7 +7,7 @@ Preface
 -------
 * This is a enhanced fork of Sebastian Tello's [PySphere](https://code.google.com/p/pysphere/), not just a git-svn mirror.
 * All trademarks and registered trademarks are the property of their respective owners.
-* Pull requests are welcome.
+* Pull requests are welcome. Please include quick examples if any new feature added.
 
 
 Features
