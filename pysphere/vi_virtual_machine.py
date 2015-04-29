@@ -1647,6 +1647,39 @@ class VIVirtualMachine(VIManagedEntity):
         except (VI.ZSI.FaultException), e:
             raise VIApiException(e)
 
+    #-----------------------#
+    #-- RESOURCES METHODS --#
+    #-----------------------#
+
+    def set_cpu_reservation(self, reservation_in_mhz):
+        '''
+        Set the CPU reservation of the Virtual Machine.
+
+        :prop int reservation_in_mhz: The reservation value to configure in MHz
+        '''
+        request = VI.ReconfigVM_TaskRequestMsg()
+        _this = request.new__this(self._mor)
+        _this.set_attribute_type(self._mor.get_attribute_type())
+        request.set_element__this(_this)
+
+        spec = request.new_spec()
+
+        alloc = spec.new_cpuAllocation()
+        alloc.set_element_reservation(reservation_in_mhz)
+
+        spec.set_element_cpuAllocation(alloc)
+        request.Spec = spec
+
+        # Make sure the reconfigure VM task was ok
+        retval = self._server._proxy.ReconfigVM_Task(request)._returnval
+        task = VITask(retval, self._server)
+        status = task.wait_for_state([task.STATE_SUCCESS, task.STATE_ERROR])
+
+        if status == task.STATE_ERROR:
+            raise VIException('Failed configuring VM with CPU reservation',
+                              FaultTypes.TASK_ERROR)
+
+
     #-------------------#
     #-- OTHER METHODS --#
     #-------------------#
