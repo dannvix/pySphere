@@ -1651,33 +1651,41 @@ class VIVirtualMachine(VIManagedEntity):
     #-- RESOURCES METHODS --#
     #-----------------------#
 
-    def set_cpu_reservation(self, reservation_in_mhz):
-        '''
+    def set_cpu_reservation(self, reservation_in_mhz, sync_run=True):
+        """
         Set the CPU reservation of the Virtual Machine.
+            reservation_in_mhz[int]: The reservation value to configure in MHz
+            sync_run[bool]: If True, waits for the task to finish and returns;
+                            If False, a VITask instance is returned
+                            right after the task is started
+        """
+        try:
+            request = VI.ReconfigVM_TaskRequestMsg()
+            _this = request.new__this(self._mor)
+            _this.set_attribute_type(self._mor.get_attribute_type())
+            request.set_element__this(_this)
 
-        :prop int reservation_in_mhz: The reservation value to configure in MHz
-        '''
-        request = VI.ReconfigVM_TaskRequestMsg()
-        _this = request.new__this(self._mor)
-        _this.set_attribute_type(self._mor.get_attribute_type())
-        request.set_element__this(_this)
+            spec = request.new_spec()
 
-        spec = request.new_spec()
+            alloc = spec.new_cpuAllocation()
+            alloc.set_element_reservation(reservation_in_mhz)
 
-        alloc = spec.new_cpuAllocation()
-        alloc.set_element_reservation(reservation_in_mhz)
+            spec.set_element_cpuAllocation(alloc)
+            request.Spec = spec
 
-        spec.set_element_cpuAllocation(alloc)
-        request.Spec = spec
-
-        # Make sure the reconfigure VM task was ok
-        retval = self._server._proxy.ReconfigVM_Task(request)._returnval
-        task = VITask(retval, self._server)
-        status = task.wait_for_state([task.STATE_SUCCESS, task.STATE_ERROR])
-
-        if status == task.STATE_ERROR:
-            raise VIException('Failed configuring VM with CPU reservation',
-                              FaultTypes.TASK_ERROR)
+            # Make sure the reconfigure VM task was ok
+            retval = self._server._proxy.ReconfigVM_Task(request)._returnval
+            vi_task = VITask(retval, self._server)
+            if sync_run:
+                status = vi_task.wait_for_state([vi_task.STATE_SUCCESS,
+                                                 vi_task.STATE_ERROR])
+                if status == vi_task.STATE_ERROR:
+                    raise VIException(vi_task.get_error_message(),
+                                      FaultTypes.TASK_ERROR)
+                return
+            return vi_task
+        except (VI.ZSI.FaultException), e:
+            VIApiException(e)
 
 
     #-------------------#
