@@ -28,6 +28,7 @@
 #--
 
 import sys
+import ssl
 
 from pysphere.resources import VimService_services as VI
 
@@ -40,7 +41,7 @@ from pysphere.vi_mor import VIMor, MORTypes
 
 class VIServer:
 
-    def __init__(self):
+    def __init__(self, ssl_verify_ignore=False):
         self.__logged = False
         self.__server_type = None
         self.__api_version = None
@@ -48,6 +49,8 @@ class VIServer:
         self.__session = None
         self.__user = None
         self.__password = None
+        if ssl_verify_ignore:
+            ssl._create_default_https_context = ssl._create_unverified_context
         #By default impersonate the VI Client to be accepted by Virtual Server
         self.__initial_headers = {"User-Agent":"VMware VI Client/5.0.0"}
 
