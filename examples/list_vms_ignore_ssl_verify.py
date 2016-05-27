@@ -2,7 +2,7 @@
 from pysphere import VIServer
 
 server = VIServer(ssl_verify_ignore=True)
-server.connect("10.43.192.56", "bbmac_service", "Tr3ndM!cr0")
+server.connect("example.com", "username", "password")
 
 # datacenter is case-senstive
 vmlist = server.get_registered_vms(datacenter="ha-datacenter")

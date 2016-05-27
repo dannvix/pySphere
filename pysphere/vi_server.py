@@ -41,7 +41,7 @@ from pysphere.vi_mor import VIMor, MORTypes
 
 class VIServer:
 
-    def __init__(self, ssl_verify_ignore=False):
+    def __init__(self):
         self.__logged = False
         self.__server_type = None
         self.__api_version = None
@@ -49,8 +49,6 @@ class VIServer:
         self.__session = None
         self.__user = None
         self.__password = None
-        if ssl_verify_ignore:
-            ssl._create_default_https_context = ssl._create_unverified_context
         #By default impersonate the VI Client to be accepted by Virtual Server
         self.__initial_headers = {"User-Agent":"VMware VI Client/5.0.0"}
 
@@ -120,6 +118,9 @@ class VIServer:
 
         except (VI.ZSI.FaultException), e:
             raise VIApiException(e)
+
+    def set_ssl_no_verify(self):
+        ssl._create_default_https_context = ssl._create_unverified_context
 
     def keep_session_alive(self):
         """Asks sever time, usefull for keeping alive a session. Returns
