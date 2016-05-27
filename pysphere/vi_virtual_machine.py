@@ -1412,9 +1412,9 @@ class VIVirtualMachine(VIManagedEntity):
             raise VIApiException(e)
 
         try:
-            url = url.decode()
+            url.decode()
         except UnicodeDecodeError as e:
-            url = url.decode("utf-8")
+            url = url.encode("utf-8")
 
         request = urllib2.Request(url, data=content)
         request.get_method = lambda: 'PUT'
