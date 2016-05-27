@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 from pysphere import VIServer
 
-server = VIServer(ssl_verify_ignore=True)
+server = VIServer()
+server.set_ssl_no_verify()
 server.connect("example.com", "username", "password")
 
 # datacenter is case-senstive
