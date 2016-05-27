@@ -28,6 +28,7 @@
 #--
 
 import sys
+import ssl
 
 from pysphere.resources import VimService_services as VI
 
@@ -117,6 +118,9 @@ class VIServer:
 
         except (VI.ZSI.FaultException), e:
             raise VIApiException(e)
+
+    def set_ssl_no_verify(self):
+        ssl._create_default_https_context = ssl._create_unverified_context
 
     def keep_session_alive(self):
         """Asks sever time, usefull for keeping alive a session. Returns
