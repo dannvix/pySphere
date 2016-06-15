@@ -1411,10 +1411,18 @@ class VIVirtualMachine(VIManagedEntity):
         except (VI.ZSI.FaultException), e:
             raise VIApiException(e)
 
+        # If url decode error with default encoding, we force to encode it with utf-8 encoding.
         try:
             url.decode()
         except UnicodeDecodeError as e:
+            # force url as a str(byte array) with utf-8 encoding
             url = url.encode("utf-8")
+
+	# urllib2.urlopen concate url and data as single request object.
+	# If type of url is unicode, it will be automatically decode with default encoding before concatenation.
+	# Force to translate unicode data into str in order to avoid automatic decode/encode steps in urllib2.urlopen
+	if not type(url) == str:
+	    url = str(url)
 
         request = urllib2.Request(url, data=content)
         request.get_method = lambda: 'PUT'
