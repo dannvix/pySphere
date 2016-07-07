@@ -1568,7 +1568,7 @@ class VIVirtualMachine(VIManagedEntity):
         except (VI.ZSI.FaultException), e:
             raise VIApiException(e)
 
-    def start_process(self, program_path, args=None, env=None, cwd=None, sync_run=False):
+    def start_process(self, program_path, args=None, env=None, cwd=None, sync_run=False, timeout=0):
         """
         Starts a program in the guest operating system. Returns the process PID.
             program_path [string]: The absolute path to the program to start.
@@ -1590,6 +1590,9 @@ class VIVirtualMachine(VIManagedEntity):
                              started process terminates. Since vSphere has no
                              support of synchrounous StartProgramInGuest,
                              this is simulated by polling ListProcessesInGuest.
+            timeout [int]: Default 0. This argument is useless when sync_run is False.
+                           If sync_run is True, timeout should be the upper bound of
+                           blocks function running time since the started.
         """
         if not self._proc_mgr:
             raise VIException("Process operations not supported on this server",
@@ -1625,11 +1628,18 @@ class VIVirtualMachine(VIManagedEntity):
             pid = self._server._proxy.StartProgramInGuest(request)._returnval
 
             if pid and sync_run:
-                # blocks this function until the target process exits
+                # blocks this function until the target process exits, or raise timeout exception
+                timeout = abs(int(timeout))
+                start_time = time.time()
                 while True:
                     proc = [p for p in self.list_processes() if p['pid'] == pid]
                     if len(proc) == 0 or proc[0]['exit_code'] is not None:
                         return pid
+                    if timeout > 0 and timeout < (time.time() - start_time):
+                        self.terminate_process(pid)
+                        raise VIException(
+                                      "Timed out. Force to kill hanging process pid: {0}".format(pid),
+                                      FaultTypes.TIME_OUT)
                     time.sleep(1.5) # seconds
             return pid
         except (VI.ZSI.FaultException), e:
