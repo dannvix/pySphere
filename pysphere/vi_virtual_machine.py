@@ -1627,15 +1627,15 @@ class VIVirtualMachine(VIManagedEntity):
             request.set_element_spec(spec)
             pid = self._server._proxy.StartProgramInGuest(request)._returnval
 
-            timeout = abs(int(timeout))
-            start_time = time.time()
             if pid and sync_run:
-                # blocks this function until the target process exits
+                # blocks this function until the target process exits, or raise timeout exception
+                timeout = abs(int(timeout))
+                start_time = time.time()
                 while True:
                     proc = [p for p in self.list_processes() if p['pid'] == pid]
                     if len(proc) == 0 or proc[0]['exit_code'] is not None:
                         return pid
-                    if timeout > 0 and  timeout < (time.time() - start_time):
+                    if timeout > 0 and timeout < (time.time() - start_time):
                         self.terminate_process(pid)
                         raise VIException(
                                       "Timed out. Force to kill hanging process pid: {0}".format(pid),
