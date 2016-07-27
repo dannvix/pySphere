@@ -39,6 +39,243 @@ from pysphere.resources.vi_exception import VIException, VIApiException, \
 from pysphere.vi_snapshot import VISnapshot
 from pysphere.vi_managed_entity import VIManagedEntity
 
+class VIVirtualMachineConfiguration():
+    def __init__(self, num_interfaces, custo_type):
+        try:
+            self._type = custo_type
+            self._spec = VI.ns0.CustomizationSpec_Def("custom").pyclass()
+            self._identity = None
+            self._userData = None
+            self._globalip = None
+            self._gui_unattended = None
+            self.interfaces_count = 0
+            self._interfaces = []
+            self._num_interfaces = num_interfaces
+
+        except (VI.ZSI.FaultException), e:
+            raise VIApiException(e)
+
+    def get_customization_spec(self):
+        # We can't have no identity so let's create an empty one
+        if self._identity is None:
+            self._create_identity()
+            def_hostname = VI.ns0.CustomizationVirtualMachineName_Def("hostName").pyclass()
+            if self._type == "LINUX":
+                self._identity.set_element_domain("pysphere.corp")
+                self._identity.set_element_hostName(def_hostname)
+            elif self._type == "SYSPREP":
+                self._userData.set_element_computerName(def_hostname)
+        if self._globalip is not None:
+            # if _globalip is defined then all interfaces must have
+            # a nicSetting
+            num = 0
+            for iface in range(self.interfaces_count, self._num_interfaces):
+                num += 1
+                self.set_dhcp_mode(iface)
+            if num:
+                print "%d interface%s configured automatically to dhcp" % (num, ("s" if (num > 1) else ""))
+        return self._spec
+
+    def _create_globalip_settings(self):
+        if self._globalip is None:
+            self._globalip = self._spec.new_globalIPSettings()
+            self._spec.set_element_globalIPSettings(self._globalip)
+
+    def _add_nic_settings(self, nicSetting, interface):
+        if interface == self.interfaces_count:
+            self._interfaces.append(nicSetting)
+            self.interfaces_count += 1
+        else:
+            self._interfaces[interface] = nicSetting
+        self._spec.set_element_nicSettingMap(self._interfaces)
+
+    def set_fixed_ip_mode(self, ip, netmask, gateway=None, interface=0):
+        """ Will set the parameters for a fixed ip on the interfance
+            whose number is specified in the @interface parameter
+        """
+        if self._globalip is None:
+            self._create_globalip_settings()
+
+        if (interface > self.interfaces_count):
+            raise VIException("Interface number can't be greater than the current number of configured interface + 1",FaultTypes.PARAMETER_ERROR)
+
+        # nicSettingMap
+        nicSetting = self._spec.new_nicSettingMap()
+        adapter = nicSetting.new_adapter()
+        nicSetting.set_element_adapter(adapter)
+
+        fixed_ip = VI.ns0.CustomizationFixedIp_Def("ip").pyclass()
+        fixed_ip.set_element_ipAddress(ip)
+        adapter.set_element_ip(fixed_ip)
+        adapter.set_element_subnetMask(netmask)
+        if gateway is not None:
+            adapter.set_element_gateway(gateway)
+        self._add_nic_settings(nicSetting, interface)
+
+    def set_dhcp_mode(self, interface=0):
+        """ Will set the interface specified by its number in parameter
+            @interface in DHCP mode
+        """
+        if self._globalip is None:
+            self._create_globalip_settings()
+
+        if (interface > self.interfaces_count):
+            raise VIException("Interface number can't be greater than the current number of configured interface + 1",FaultTypes.PARAMETER_ERROR)
+
+        # nicSettingMap
+        nicSetting = self._spec.new_nicSettingMap()
+        adapter = nicSetting.new_adapter()
+        nicSetting.set_element_adapter(adapter)
+        dhcp = VI.ns0.CustomizationDhcpIpGenerator_Def("ip").pyclass()
+        adapter.set_element_ip(dhcp)
+        self._add_nic_settings(nicSetting, interface)
+
+    def set_dns_servers(self, servers):
+        """ Will set the list of DNS for the customization """
+
+        if self._globalip is None:
+            self._create_globalip_settings()
+
+        self._globalip.set_element_dnsServerList(servers)
+
+    def set_dns_search_suffixes(self, suffixies):
+        """ Will set the list of suffixed"""
+
+        if self._globalip is None:
+            self._create_globalip_settings()
+
+        self._globalip.set_element_dnsSuffixList(suffixies)
+
+    def _create_identity(self):
+        """ Create an empty identity container
+            Normally you won't call this function directly
+        """
+        if self._identity is None:
+            if self._type == "LINUX":
+                self._identity = VI.ns0.CustomizationLinuxPrep_Def("identity").pyclass()
+            elif self._type == "SYSPREP":
+                self._identity = VI.ns0.CustomizationSysprep_Def("identity").pyclass()
+                self._create_user_data()
+                self._create_gui_unattended()
+                self._create_identification()
+            elif self._type == "SYSPREPTEXT":
+                raise VIException("Type SYSPREPTEXT not supported for this function",FaultTypes.PARAMETER_ERROR)
+        self._spec.set_element_identity(self._identity)
+
+    def _create_user_data(self):
+        """ Create an default user data containter.
+            Normally you won't call this function directly
+        """
+        if not self._userData:
+            self._userData = self._identity.new_userData()
+            self._userData.set_element_fullName("PyShere")
+        if self._identity is None:
+            self._create_identity()
+            self._userData.set_element_orgName("PySphere")
+            self._userData.set_element_productId("")
+            self._identity.set_element_userData(self._userData)
+
+
+    def _create_gui_unattended(self):
+        """ Create a default gui_unattended container as it's required to have
+            one in the SYSPREP customization
+        """
+        if self._identity is None:
+            raise (VIException("Can't call _create_gui_unattended before _create_identity", FaultTypes.INVALID_OPERATION))
+
+        if self._gui_unattended is None:
+            self._gui_unattended = self._identity.new_guiUnattended()
+            self._gui_unattended.set_element_autoLogon(True)
+            self._gui_unattended.set_element_autoLogonCount(1)
+            # http://msdn.microsoft.com/en-us/library/ms912391(v=winembedded.11).aspx
+            # 85 is GMT Standard Time
+            self._gui_unattended.set_element_timeZone(85)
+            self._identity.set_element_guiUnattended(self._gui_unattended)
+
+    def _create_identification(self):
+        """ Create a default identitifcation container. It's required to have
+            one for the SYSPREP customization
+        """
+        if self._identity is None:
+            raise (VIException("Can't call _create_identification before _create_identity", FaultTypes.INVALID_OPERATION))
+        # There is no required field just a requirement to have this object
+        self._identification = self._identity.new_identification()
+        self._identity.set_element_identification(self._identification)
+
+    def set_workgroup(self, groupname):
+        if not self._identity:
+            self._create_identity()
+
+        self._identification.set_element_joinDomain(groupname)
+
+    def set_domain(self, domain, password, username="administrator"):
+        if not self._identity:
+            self._create_identity()
+
+        self._identification.set_element_domainAdmin(username)
+        domainAdminPassword = self._identification.new_domainAdminPassword()
+        domainAdminPassword.set_element_plainText(True)
+        domainAdminPassword.set_element_value(password)
+        self._identification.set_element_domainAdminPassword(domainAdminPassword)
+        self._identification.set_element_joinDomain(domain)
+
+    def set_autologon(self, autolog, num_autolog):
+        """ Configure the autologon settings in the customize step
+            @autolog set it to True to enable autolog
+            @num_autolog define the number of time administrator will be autologed
+        """
+        if self._identity is None:
+            self._create_identity()
+        self._gui_unattended.set_element_autoLogon(autolog)
+        self._gui_unattended.set_element_autoLogonCount(num_autolog)
+
+    def set_registration_info(self, username, org, productid):
+        """ Set the registration info: username and organisation """
+        if self._identity is None:
+            self._create_identity()
+        self._userData.set_element_fullName(username)
+        self._userData.set_element_orgName(org)
+        self._userData.set_element_productId(productid)
+
+    def set_timezone(self, tz_int):
+        """ Set the timezone in the customization template.
+            expect @tz_int to be an integer, see http://msdn.microsoft.com/en-us/library/ms912391(v=winembedded.11).aspx
+            for the different values
+        """
+        if self._identity is None:
+            self._create_identity()
+
+        self._gui_unattended.set_element_timeZone(tz_int)
+        self._identity.set_element_guiUnattended(self._gui_unattended)
+
+    def set_admin_password(self, password):
+        if self._identity is None:
+            self._create_identity()
+
+        passw = self._gui_unattended.new_password()
+        self._gui_unattended.set_element_password(passw)
+        passw.set_element_value(password)
+        passw.set_element_plainText(True)
+
+    def set_hostname(self, name, domain):
+        """ Set the hostname and dnsdomain name in the customisation settings"""
+        if self._identity is None:
+            self._create_identity()
+
+        hostName = VI.ns0.CustomizationFixedName_Def("hostName").pyclass()
+        hostName.set_element_name(name.replace("_", "-"))
+        if self._type == "LINUX":
+            self._identity.set_element_domain(domain)
+            self._identity.set_element_hostName(hostName)
+        elif self._type == "SYSPREP":
+            self._userData.set_element_computerName(hostName)
+
+    def set_sysprep_text(self, sysprep_text):
+        if self._type != "SYSPREPTEXT":
+            raise VIException("Type SYSPREPTEXT not supported for this function",FaultTypes.PARAMETER_ERROR)
+        self._identity = VI.ns0.CustomizationSysprepText_Def("identity").pyclass()
+        self._identity.set_element_value(sysprep_text)
+
 class VIVirtualMachine(VIManagedEntity):
 
     def __init__(self, server, mor):
@@ -48,6 +285,7 @@ class VIVirtualMachine(VIManagedEntity):
         self._disks = []
         self._files = {}
         self._devices = {}
+        self._num_interfaces = 0
         self.__current_snapshot = None
         self._resource_pool = None
         self.properties = None
@@ -400,12 +638,18 @@ class VIVirtualMachine(VIManagedEntity):
         except (VI.ZSI.FaultException), e:
             raise VIApiException(e)
 
+    def get_new_customization(self, type):
+        """ Return a new customization object that can be used in clone
+        operations to customize the clone"""
+
+        return VIVirtualMachineConfiguration(self._num_interfaces, type)
+
     #--------------#
     #-- CLONE VM --#
     #--------------#
-    def clone(self, name, sync_run=True, folder=None, resourcepool=None, 
-              datastore=None, host=None, power_on=True, template=False, 
-              snapshot=None, linked=False):
+    def clone(self, name, sync_run=True, folder=None, resourcepool=None,
+              datastore=None, host=None, power_on=True, template=False,
+              snapshot=None, linked=False, customize=None):
         """Clones this Virtual Machine
         @name: name of the new virtual machine
         @sync_run: if True (default) waits for the task to finish, and returns
@@ -523,9 +767,14 @@ class VIVirtualMachine(VIManagedEntity):
             
             if linked and snapshot:
                 location.set_element_diskMoveType("createNewChildDiskBacking")
-                
-            spec.set_element_location(location)    
+
+            spec.set_element_location(location)
             spec.set_element_template(template)
+
+            if not template and customize is not None:
+                custom = customize.get_customization_spec()
+                spec.set_element_customization(custom)
+
             request.set_element_spec(spec)
             task = self._server._proxy.CloneVM_Task(request)._returnval
             vi_task = VITask(task, self._server)
@@ -1978,7 +2227,10 @@ class VIVirtualMachine(VIManagedEntity):
             self._server._proxy.ValidateCredentialsInGuest(request)
         except (VI.ZSI.FaultException), e:
             raise VIApiException(e)
-    
+
+    def get_num_interfaces(self):
+        return self._num_interfaces
+
     def __update_properties(self):
         """Refreshes the properties retrieved from the virtual machine
         (i.e. name, path, snapshot tree, etc). To reduce traffic, all the
@@ -2001,6 +2253,7 @@ class VIVirtualMachine(VIManagedEntity):
                 if hasattr(dev,'macAddress'):
                     d['macAddress'] = dev.macAddress
                     d['addressType'] = getattr(dev,'addressType',None)
+                    self._num_interfaces += 1
                 # Video Card
                 if hasattr(dev,'videoRamSizeInKB'):
                     d['videoRamSizeInKB'] = dev.videoRamSizeInKB
@@ -2151,6 +2404,5 @@ class ToolsStatus:
 
     #VMware Tools is running, but the version is not current.
     RUNNING_OLD     = 'RUNNING OLD'
-
     #Couldn't obtain the status of the VMwareTools.
     UNKNOWN         = 'UNKNOWN'
